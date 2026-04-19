@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YanzzSmart AI Ultra</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EduSmart">
+    
+    <!-- Web Manifest (Inline for simplicity) -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkVkdVNtYXJ0IEFJIFVsdHJhIiwKICAic2hvcnRfbmFtZSI6ICJFZHVTbWFydCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZmZmZmZmIiwKICAidGhlbWVfY29sb3IiI6ICIjMjU2M2ViIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9jZG4taWNvbnMtcG5nLmZyZWVwaWsuY29tLzUxMi83NzMxLzc3MzEyNTYucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9CiAgXQp9">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        .chat-container { height: calc(100vh - 180px); }
+        .sidebar-item.active { background: #2563eb; color: white; }
+        .history-item:hover { background: #f1f5f9; }
+        .msg-bubble { max-width: 88%; border-radius: 20px; }
+        .ai-image { border-radius: 12px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 100%; border: 1px solid #e2e8f0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message-anim { animation: fadeIn 0.3s ease-out forwards; }
+        
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .chat-container { height: calc(100vh - 160px); }
+            .sidebar-mobile-hidden { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 flex h-screen">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-72 bg-white border-r border-slate-200 flex flex-col z-50 transition-transform duration-300">
+        <div class="p-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-xl text-white shadow-lg">
+                    <i class="fas fa-robot text-xl"></i>
+                </div>
+                <span class="font-bold text-xl">EduSmart <span class="text-blue-600">Ultra</span></span>
+            </div>
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="px-4 mb-4">
+            <button onclick="createNewChat()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-semibold text-sm">
+                <i class="fas fa-plus"></i>
+                <span>Chat Baru</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 space-y-1">
+            <p class="text-[10px] font-bold text-slate-400 uppercase px-2 mb-2">Riwayat Percakapan</p>
+            <div id="history-list" class="space-y-1">
+                <div class="text-xs text-slate-400 text-center py-4">Belum ada riwayat</div>
+            </div>
+        </div>
+
+        <nav class="px-4 py-4 border-t border-slate-100 space-y-1">
+            <button onclick="switchTab('chat')" id="tab-chat" class="sidebar-item active w-full flex items-center gap-3 p-3 rounded-xl transition-all">
+                <i class="fas fa-comment-alt"></i><span class="font-medium">Chat & Tugas</span>
+            </button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="sidebar-item w-full flex items-center gap-3 p-3 rounded-xl transition-all">
+                <i class="fas fa-user-cog"></i><span class="font-medium">Pengaturan</span>
+            </button>
+        </nav>
+
+        <div class="p-4 bg-slate-50 border-t border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">S</div>
+                <div class="flex-1">
+                    <p class="text-[11px] font-bold truncate" id="side-user-name">Siswa Berprestasi</p>
+                    <p class="text-[9px] text-slate-500 uppercase">App v2.5 Stable</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative bg-[#f8fafc] w-full">
+        
+        <!-- Tab: CHAT -->
+        <section id="section-chat" class="flex-1 flex flex-col relative overflow-hidden">
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 p-3 md:p-4 flex justify-between items-center sticky top-0 z-10">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden text-slate-600 p-2">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <span class="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-full hidden sm:block" id="lvl-tag">SMA</span>
+                    <h2 class="font-bold text-slate-700 text-sm md:text-base">Asisten Multimedia</h2>
+                </div>
+                <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                    <button onclick="setLevel('SD')" id="btn-SD" class="px-2 md:px-3 py-1 text-[10px] font-bold rounded-md">SD</button>
+                    <button onclick="setLevel('SMP')" id="btn-SMP" class="px-2 md:px-3 py-1 text-[10px] font-bold rounded-md">SMP</button>
+                    <button onclick="setLevel('SMA')" id="btn-SMA" class="px-2 md:px-3 py-1 text-[10px] font-bold rounded-md bg-white shadow-sm">SMA</button>
+                </div>
+            </header>
+
+            <div id="chat-box" class="chat-container overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
+                <div class="flex flex-col items-start message-anim">
+                    <div class="msg-bubble bg-white border border-slate-200 p-4 shadow-sm">
+                        <p class="text-[10px] font-bold text-blue-600 uppercase mb-1">Sistem EduSmart</p>
+                        <p class="text-sm">Siap membantu! Klik ikon kamera untuk foto soal atau ketik tugasmu.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Input Area -->
+            <div class="p-3 md:p-4 bg-white border-t md:bg-transparent md:border-none">
+                <div class="max-w-4xl mx-auto">
+                    <div id="image-preview-area" class="hidden mb-2 relative inline-block">
+                        <img id="preview-img" src="" class="h-16 w-16 md:h-20 md:w-20 object-cover rounded-xl border-2 border-blue-500 shadow-lg">
+                        <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center shadow-md"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="relative bg-slate-50 md:bg-white border border-slate-200 rounded-2xl shadow-sm md:shadow-xl p-1 md:p-2">
+                        <div class="flex items-end gap-1 md:gap-2">
+                            <label class="cursor-pointer p-2 md:p-3 hover:bg-slate-100 rounded-xl transition-all text-slate-400">
+                                <i class="fas fa-camera text-lg md:text-xl"></i>
+                                <input type="file" id="file-input" class="hidden" accept="image/*" onchange="previewUpload(this)">
+                            </label>
+
+                            <textarea id="user-input" rows="1" class="w-full bg-transparent border-none focus:ring-0 py-2 md:py-3 px-1 text-sm resize-none" placeholder="Tanya soal / gambar..."></textarea>
+                            
+                            <button id="send-btn" class="bg-blue-600 text-white p-2 md:p-3 rounded-xl shadow-lg shadow-blue-200 active:scale-95">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="install-hint" class="hidden text-[10px] text-center text-blue-600 mt-2 font-bold animate-pulse cursor-pointer" onclick="showInstallPrompt()">
+                        Klik di sini untuk instal aplikasi di HP Anda!
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: SETTINGS -->
+        <section id="section-settings" class="hidden flex-1 p-6 overflow-y-auto">
+            <div class="max-w-2xl mx-auto space-y-6">
+                <h2 class="text-2xl font-bold">Pengaturan</h2>
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 space-y-4">
+                    <input type="text" id="set-name" class="w-full p-3 bg-slate-50 border rounded-xl text-sm" placeholder="Nama Kamu">
+                    <div class="grid grid-cols-2 gap-4">
+                        <select id="set-app-lang" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                            <option value="id">Bahasa Indonesia</option>
+                            <option value="en">English</option>
+                        </select>
+                        <select id="set-ai-lang" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                            <option value="Formal">Formal</option>
+                            <option value="Simple">Sederhana</option>
+                        </select>
+                    </div>
+                    <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg">Simpan</button>
+                    <button onclick="clearAllHistory()" class="w-full text-red-500 text-xs font-bold mt-2">Hapus Semua Riwayat</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="loading" class="hidden fixed inset-0 bg-slate-900/10 backdrop-blur-sm z-[100] flex items-center justify-center">
+        <div class="bg-white p-5 rounded-3xl shadow-2xl flex flex-col items-center gap-3">
+            <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Memproses...</p>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "";
+        let currentLevel = "SMA";
+        let uploadedImageB64 = null;
+        let deferredPrompt;
+
+        // PWA Installation Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-hint').classList.remove('hidden');
+        });
+
+        async function showInstallPrompt() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('install-hint').classList.add('hidden');
+                }
+                deferredPrompt = null;
+            }
+        }
+
+        // Service Worker (Simple Inline)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGV2ID0+IHsgfSk7').catch(() => {});
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(`section-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            if(window.innerWidth < 768) toggleSidebar();
+        }
+
+        function previewUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    uploadedImageB64 = e.target.result.split(',')[1];
+                    document.getElementById('preview-img').src = e.target.result;
+                    document.getElementById('image-preview-area').classList.remove('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeImage() {
+            uploadedImageB64 = null;
+            document.getElementById('image-preview-area').classList.add('hidden');
+            document.getElementById('file-input').value = '';
+        }
+
+        function setLevel(lvl) {
+            currentLevel = lvl;
+            document.querySelectorAll('button[id^="btn-"]').forEach(b => b.classList.remove('bg-white', 'shadow-sm'));
+            document.getElementById(`btn-${lvl}`).classList.add('bg-white', 'shadow-sm');
+            document.getElementById('lvl-tag').innerText = lvl;
+        }
+
+        function appendMessage(role, text, visual = null) {
+            const container = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'} message-anim`;
+            let bubbleClass = role === 'user' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-700';
+            let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            div.innerHTML = `<div class="msg-bubble p-4 text-sm shadow-sm ${bubbleClass}">${formattedText}${visual ? `<img src="${visual}" class="ai-image" />` : ''}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function runAI() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text && !uploadedImageB64) return;
+
+            if(text) {
+                const historyList = document.getElementById('history-list');
+                const item = document.createElement('div');
+                item.className = "history-item p-3 rounded-xl cursor-pointer text-xs font-medium truncate";
+                item.innerHTML = `<i class="fas fa-message mr-2 text-slate-400"></i> ${text}`;
+                historyList.prepend(item);
+                if(historyList.lastChild && historyList.lastChild.innerText?.includes("Belum ada")) historyList.lastChild.remove();
+            }
+
+            if (text.toLowerCase().startsWith('/gambar')) {
+                const prompt = text.replace('/gambar', '').trim();
+                handleImageGeneration(prompt);
+                input.value = '';
+                return;
+            }
+
+            appendMessage('user', text || "Analisis Gambar...");
+            if(uploadedImageB64) appendMessage('user', "Lampiran Gambar", document.getElementById('preview-img').src);
+            
+            input.value = '';
+            input.style.height = 'auto';
+            const b64 = uploadedImageB64;
+            removeImage();
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: text || "Selesaikan soal ini." }, ...(b64 ? [{ inlineData: { mimeType: "image/png", data: b64 } }] : [])] }],
+                        systemInstruction: { parts: [{ text: `Kamu adalah EduSmart AI Ultra tingkat ${currentLevel}.` }] }
+                    })
+                });
+                const data = await res.json();
+                appendMessage('ai', data.candidates[0].content.parts[0].text);
+            } catch (e) {
+                appendMessage('ai', "Error koneksi.");
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        async function handleImageGeneration(prompt) {
+            appendMessage('user', `Buat gambar: ${prompt}`);
+            document.getElementById('loading').classList.remove('hidden');
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instances: { prompt: prompt }, parameters: { sampleCount: 1 } })
+                });
+                const data = await res.json();
+                appendMessage('ai', `Hasil: ${prompt}`, `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`);
+            } catch (e) {
+                appendMessage('ai', "Gagal generate gambar.");
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function createNewChat() {
+            document.getElementById('chat-box').innerHTML = '<div class="p-4 text-xs text-slate-400">Sesi baru dimulai...</div>';
+            if(window.innerWidth < 768) toggleSidebar();
+        }
+
+        function saveSettings() {
+            document.getElementById('side-user-name').innerText = document.getElementById('set-name').value || "User";
+            switchTab('chat');
+        }
+
+        document.getElementById('send-btn').onclick = runAI;
+        document.getElementById('user-input').onkeydown = e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runAI(); } };
+    </script>
+</body>
+</html>
